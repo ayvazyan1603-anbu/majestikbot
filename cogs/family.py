@@ -9,6 +9,7 @@ FAMILY_CHANNEL_ID = int(os.getenv("FAMILY_CHANNEL_ID"))
 ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID"))
 FAMILY_ROLE_ID = int(os.getenv("FAMILY_ROLE_ID"))
 
+
 # ──────────────────────────────────────────
 # Модал: заявка на вступление
 # ──────────────────────────────────────────
@@ -30,7 +31,7 @@ class FamilyModal(disnake.ui.Modal):
                 max_length=100,
             ),
         ]
-        super().__init__(title="⛩ Заявка в семью Majestik RP", components=components)
+        super().__init__(title="🎭 Заявка в Leverage Family", components=components)
 
     async def callback(self, inter: disnake.ModalInteraction):
         nick = inter.text_values["nick"]
@@ -44,7 +45,7 @@ class FamilyModal(disnake.ui.Modal):
             return
 
         embed = disnake.Embed(
-            title="📋 НОВАЯ ЗАЯВКА В СЕМЬЮ",
+            title="📋 НОВАЯ ЗАЯВКА | Leverage Family",
             color=0x2b2d31
         )
         embed.add_field(name="👤 Игрок", value=f"{applicant.mention}\n`{applicant.id}`", inline=True)
@@ -64,16 +65,16 @@ class FamilyModal(disnake.ui.Modal):
 
 
 # ──────────────────────────────────────────
-# Кнопка: Вступить в семью
+# Кнопка: Получить роль
 # ──────────────────────────────────────────
 class FamilyJoinView(disnake.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
     @disnake.ui.button(
-        label="Вступить в семью",
+        label="Получить роль",
         style=disnake.ButtonStyle.danger,
-        emoji="⛩",
+        emoji="🎭",
         custom_id="family_join"
     )
     async def join_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
@@ -121,7 +122,6 @@ class DenyReasonModal(disnake.ui.Modal):
             result_view = ResultView(approved=False, admin=admin)
             await origin_channel.send(embed=embed, view=result_view)
 
-        # Деактивируем кнопки в канале админов
         disabled_view = AdminDecisionView(
             applicant_id=self.applicant_id,
             applicant_nick=self.applicant_nick,
@@ -172,16 +172,14 @@ class AdminDecisionView(disnake.ui.View):
 
         await inter.response.defer()
 
-        # Выдаём роль
         if member:
             role = guild.get_role(FAMILY_ROLE_ID)
             if role:
                 try:
-                    await member.add_roles(role, reason="Принят в семью")
+                    await member.add_roles(role, reason="Принят в Leverage Family")
                 except Exception:
                     pass
 
-        # Сообщение в основной канал
         origin_channel = guild.get_channel(self.origin_channel_id)
         if origin_channel:
             embed = disnake.Embed(
@@ -196,7 +194,6 @@ class AdminDecisionView(disnake.ui.View):
             result_view = ResultView(approved=True, admin=admin)
             await origin_channel.send(embed=embed, view=result_view)
 
-        # Деактивируем кнопки
         disabled_view = AdminDecisionView(
             applicant_id=self.applicant_id,
             applicant_nick=self.applicant_nick,
@@ -252,18 +249,13 @@ class Family(commands.Cog):
     @commands.command(name="setup_family")
     @commands.has_permissions(administrator=True)
     async def setup_family(self, ctx: commands.Context):
-        """Отправляет embed с кнопкой вступления"""
         await ctx.message.delete()
 
         embed = disnake.Embed(
-            title="⛩ ВСТУПЛЕНИЕ В СЕМЬЮ | MAJESTIK RP",
+            title="🎭 ПОЛУЧЕНИЕ РОЛЕЙ | Leverage Family",
             description=(
-                "Хочешь стать частью нашей семьи?\n\n"
-                "**Нажми на кнопку ниже**, заполни анкету и ожидай решения администрации.\n\n"
-                "**Требования:**\n"
-                "— Активность\n"
-                "— Уважение к правилам\n"
-                "— Игровой опыт"
+                "Ты уже с нами? Тогда подтверди своё участие в семье и получи роль в Discord.\n\n"
+                "Заполни анкету ниже и ожидай решения администрации."
             ),
             color=0x2b2d31
         )
@@ -272,9 +264,32 @@ class Family(commands.Cog):
 
         await ctx.send(embed=embed, view=FamilyJoinView())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print("✅ Family cog загружен")
+    @commands.command(name="uninvite")
+    @commands.has_permissions(administrator=True)
+    async def uninvite(self, ctx: commands.Context, member: disnake.Member):
+        role = ctx.guild.get_role(FAMILY_ROLE_ID)
+
+        if not role:
+            return await ctx.send(embed=disnake.Embed(
+                title="❌ Ошибка",
+                description="Роль не найдена.",
+                color=0xed4245
+            ).set_footer(text="Система ANBU • Автоматизация и разработка"))
+
+        if role not in member.roles:
+            return await ctx.send(embed=disnake.Embed(
+                title="❌ Ошибка",
+                description=f"У {member.mention} нет роли Family Member.",
+                color=0xed4245
+            ).set_footer(text="Система ANBU • Автоматизация и разработка"))
+
+        await member.remove_roles(role, reason=f"Uninvite от {ctx.author}")
+        await ctx.send(embed=disnake.Embed(
+            title="✅ Роль снята",
+            description=f"{member.mention} исключён из Leverage Family.\n**Модератор:** {ctx.author.mention}",
+            color=0xed4245
+        ).set_footer(text="Система ANBU • Автоматизация и разработка"))
+
 
 def setup(bot):
     bot.add_cog(Family(bot))
