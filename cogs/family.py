@@ -25,7 +25,7 @@ class FamilyModal(disnake.ui.Modal):
             ),
             disnake.ui.TextInput(
                 label="Static (статистика)",
-                placeholder="Например: 5/10/200k",
+                placeholder="Например: #123123",
                 custom_id="static",
                 style=disnake.TextInputStyle.short,
                 max_length=100,
